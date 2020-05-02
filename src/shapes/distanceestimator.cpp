@@ -48,6 +48,40 @@ Bounds3f DistanceEstimator::ObjectBound() const {
 
 bool DistanceEstimator::Intersect(const Ray &r, Float *tHit, SurfaceInteraction *isect,
                        bool testAlphaTexture) const {
+
+
+ float t ;
+
+ float   d        = Evaluate(r.o);
+ Point3f p        = r.o;
+ Point3f pHit     = p; 
+
+ //RayMarching from the origin 
+
+ for (int iter = 0; iter < maxIters ; iter++ ) {
+
+    if( d < hitEpsilon) {   //hit position
+       pHit = p; 
+    }
+
+    else {
+
+       if ( d < r.tMax){
+
+           p = p + (d /r.d.Length()) * r.d;
+           Evaluate(p);
+
+       }
+       else {
+         pHit = r.o+ r.tMax/r.d.Length();
+         break;
+       }
+
+    }
+
+ }
+
+
     ProfilePhase p(Prof::ShapeIntersect);
     Float phi;
     Point3f pHit;
@@ -55,7 +89,7 @@ bool DistanceEstimator::Intersect(const Ray &r, Float *tHit, SurfaceInteraction 
     Vector3f oErr, dErr;
     Ray ray = (*WorldToObject)(r, &oErr, &dErr);
 
-    // Compute quadratic DistanceEstimator coefficients
+    // Compute quadratic sphere coefficients
 
     // Initialize _EFloat_ ray coordinate values
     EFloat ox(ray.o.x, oErr.x), oy(ray.o.y, oErr.y), oz(ray.o.z, oErr.z);
@@ -145,6 +179,8 @@ bool DistanceEstimator::Intersect(const Ray &r, Float *tHit, SurfaceInteraction 
     // Compute error bounds for sphere intersection
     Vector3f pError = gamma(5) * Abs((Vector3f)pHit);
 
+
+
     // Initialize _SurfaceInteraction_ from parametric information
     *isect = (*ObjectToWorld)(SurfaceInteraction(pHit, pError, Point2f(u, v),
                                                  -ray.d, dpdu, dpdv, dndu, dndv,
@@ -153,6 +189,7 @@ bool DistanceEstimator::Intersect(const Ray &r, Float *tHit, SurfaceInteraction 
     // Update _tHit_ for quadric intersection
     *tHit = (Float)tShapeHit;
     return true;
+ }
 }
 
 bool DistanceEstimator::IntersectP(const Ray &r, bool testAlphaTexture) const {
@@ -326,13 +363,31 @@ Float DistanceEstimator::SolidAngle(const Point3f &p, int nSamples) const {
 std::shared_ptr<Shape> CreateDistanceEstimatorShape(const Transform *o2w,
                                          const Transform *w2o,
                                          bool reverseOrientation,
-                                         const ParamSet &params) {
+                                         const ParamSet &params,
+                                         const int maxIters,
+                                         const float hitEpsilon,
+                                         const float rayEpsilonMultipler,
+                                         const float normalEpsilon)
+                                          {
     Float radius = params.FindOneFloat("radius", 1.f);
     Float zmin = params.FindOneFloat("zmin", -radius);
     Float zmax = params.FindOneFloat("zmax", radius);
     Float phimax = params.FindOneFloat("phimax", 360.f);
+    int maxIters = params.FindOneInt("maxIters", 1000);
+    Float hitEpsilon = params.FindOneFloat("hitEpsilon", 0.000001f);
+    Float rayEpsilonMultiplier = params.FindOneFloat("rayEpsilonMultiplier", 0.000001f);
+    Float normalEpsilon = params.FindOneFloat("normalEpsilon", 0.000001f);
+
     return std::make_shared<DistanceEstimator>(o2w, w2o, reverseOrientation, radius, zmin,
                                     zmax, phimax);
+}
+
+
+//Distance Estimator
+
+Float DistanceEstimator::Evaluate (const Point3f &p) const {
+      float distance = p.x * p.x + p.y*p.y + p.z*p.z - radius;
+      return distance;
 }
 
 }  // namespace pbrt
