@@ -97,6 +97,7 @@
 #include "shapes/nurbs.h"
 #include "shapes/paraboloid.h"
 #include "shapes/sphere.h"
+#include "shapes/distanceestimator.h"
 #include "shapes/triangle.h"
 #include "shapes/plymesh.h"
 #include "textures/bilerp.h"
@@ -290,8 +291,8 @@ class TransformCache {
 
     void Clear() {
         transformCacheBytes += arena.TotalAllocated() + hashTable.size() * sizeof(Transform *);
-        hashTable.resize(512);
         hashTable.clear();
+        hashTable.resize(512);
         hashTableOccupancy = 0;
         arena.Reset();
     }
@@ -323,16 +324,14 @@ void TransformCache::Insert(Transform *tNew) {
     if (++hashTableOccupancy == hashTable.size() / 2)
         Grow();
 
-    int offset = Hash(*tNew) & (hashTable.size() - 1);
-    int step = 1;
-    while (true) {
+    int baseOffset = Hash(*tNew) & (hashTable.size() - 1);
+    for (int nProbes = 0;; ++nProbes) {
+        // Quadratic probing.
+        int offset = (baseOffset + nProbes/2 + nProbes*nProbes/2) & (hashTable.size() - 1);
         if (hashTable[offset] == nullptr) {
             hashTable[offset] = tNew;
             return;
         }
-        // Advance using quadratic probing.
-        offset = (offset + step * step) & (hashTable.size() - 1);
-        ++step;
     }
 }
 
@@ -344,16 +343,14 @@ void TransformCache::Grow() {
     for (Transform *tEntry : hashTable) {
         if (!tEntry) continue;
 
-        int offset = Hash(*tEntry) & (newTable.size() - 1);
-        int step = 1;
-        while (true) {
+        int baseOffset = Hash(*tEntry) & (hashTable.size() - 1);
+        for (int nProbes = 0;; ++nProbes) {
+            // Quadratic probing.
+            int offset = (baseOffset + nProbes/2 + nProbes*nProbes/2) & (hashTable.size() - 1);
             if (newTable[offset] == nullptr) {
                 newTable[offset] = tEntry;
                 break;
             }
-            // Advance using quadratic probing.
-            offset = (offset + step * step) & (hashTable.size() - 1);
-            ++step;
         }
     }
 
@@ -434,9 +431,14 @@ std::vector<std::shared_ptr<Shape>> MakeShapes(const std::string &name,
                                                const ParamSet &paramSet) {
     std::vector<std::shared_ptr<Shape>> shapes;
     std::shared_ptr<Shape> s;
+
     if (name == "sphere")
         s = CreateSphereShape(object2world, world2object, reverseOrientation,
                               paramSet);
+
+    else if (name == "distanceestimator")
+         s = CreateDistanceEstimatorShape(object2world, world2object, reverseOrientation,paramSet);
+
     // Create remaining single _Shape_ types
     else if (name == "cylinder")
         s = CreateCylinderShape(object2world, world2object, reverseOrientation,
@@ -715,7 +717,7 @@ std::shared_ptr<Medium> MakeMedium(const std::string &name,
         Point3f p1 = paramSet.FindOnePoint3f("p1", Point3f(1.f, 1.f, 1.f));
         if (nitems != nx * ny * nz) {
             Error(
-                "GridDensityMedium has %d density values; expected nx*ny*nz = "
+                "GridDensityMedium has %d density vCreateDistanceEstimatorShapealues; expected nx*ny*nz = "
                 "%d",
                 nitems, nx * ny * nz);
             return NULL;
@@ -1538,11 +1540,11 @@ void pbrtObjectEnd() {
     VERIFY_WORLD("ObjectEnd");
     if (!renderOptions->currentInstance)
         Error("ObjectEnd called outside of instance definition");
+    if (PbrtOptions.cat || PbrtOptions.toPly)
+        printf("%*sObjectEnd\n", catIndentCount, "");
     renderOptions->currentInstance = nullptr;
     pbrtAttributeEnd();
     ++nObjectInstancesCreated;
-    if (PbrtOptions.cat || PbrtOptions.toPly)
-        printf("%*sObjectEnd\n", catIndentCount, "");
 }
 
 STAT_COUNTER("Scene/Object instances used", nObjectInstancesUsed);
