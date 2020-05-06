@@ -46,42 +46,82 @@ Bounds3f DistanceEstimator::ObjectBound() const {
                     Point3f(radius, radius, zMax));
 }
 
-bool DistanceEstimator::Intersect(const Ray &r, Float *tHit, SurfaceInteraction *isect,
-                       bool testAlphaTexture) const {
+bool DistanceEstimator::Intersect(const Ray &r, Float *tHit, SurfaceInteraction *isect, bool testAlphaTexture) const {
 
+  // Transform _Ray_ to object space
+  Vector3f oErr, dErr;
 
- float t ;
+  // float t ;y
+  //Ray ray = (*WorldToObject)(r, &oErr, &dErr);
+  Ray ray = r; 
 
- float   d        = Evaluate(r.o);
- Point3f p        = r.o;
- Point3f pHit     = p; 
+ 
+
+  float   d        = Evaluate(ray.o);
+  Point3f p        = ray.o;
+  Point3f pHit     = p; 
+  float tShapeHit   = 0;  
 
  //RayMarching from the origin 
 
- for (int iter = 0; iter < maxIters ; iter++ ) {
+  std::cout <<" max iters is " << maxIters << std::endl;
+  std::cout <<"ray.tMax is   " << ray.tMax << std::endl;  
+  std::cout <<"hitEpsilon is " <<hitEpsilon << std::endl;  
+  std::cout <<"ray.origin is    " << ray.o.x << ", "  << ray.o.y <<", " << ray.o.z <<";"<< std::endl;  
 
-    if( d < hitEpsilon) {   //hit position
-       pHit = p; 
-    }
-
-    else {
-
-       if ( d < r.tMax){
-
-           p = p + (d /r.d.Length()) * r.d;
-           Evaluate(p);
-
-       }
-       else {
-         pHit = r.o+ r.tMax/r.d.Length();
-         break;
-       }
-
-    }
-
- }
+  for (int iter = 0; iter < maxIters ; iter++ ) {
 
 
+     if( d < hitEpsilon) {   //hit position
+        pHit = p; 
+        std::cout<<" ray marching done with iter number" << iter<<std::endl;
+     }
+
+     else {
+
+        if ( d < ray.tMax){
+
+            p = p +  d * r.d;
+            tShapeHit += d;
+
+            d = Evaluate(p)/ray.d.Length();
+
+            std::cout<<" d == " <<  d <<  " with iter  = " << iter<<std::endl;
+
+        }
+        else {
+          pHit = ray.o + ray.tMax/ray.d.Length() * ray.d;
+          std::cout<<" ray marching miss with iter number" << iter<<std::endl;
+          break;
+        }
+
+     }
+
+  }
+
+  std::cout <<"  tShapeHit " << tShapeHit << std::endl;
+
+  // Compute error bounds for sphere intersection
+  Vector3f pError = gamma(5) * Abs((Vector3f)pHit);
+
+  float u = 0;
+  float v = 0; 
+  Normal3f dndu = Normal3f(0,0,0);
+  Normal3f dndv = Normal3f(0,0,0); 
+
+  Vector3f dpdu = Vector3f(0,1,0);
+  Vector3f dpdv = Vector3f(1,0,0);
+
+  // Initialize _SurfaceInteraction_ from parametric information
+  *isect = SurfaceInteraction(pHit, pError, Point2f(u, v), -r.d, dpdu, dpdv, dndu, dndv, r.time, this);
+
+ // Update _tHit_ for quadric intersection
+  *tHit = tShapeHit;
+
+
+  std::cout <<"  surface  intersect done " << std::endl;
+
+ /*
     ProfilePhase p(Prof::ShapeIntersect);
     Float phi;
     Point3f pHit;
@@ -188,11 +228,14 @@ bool DistanceEstimator::Intersect(const Ray &r, Float *tHit, SurfaceInteraction 
 
     // Update _tHit_ for quadric intersection
     *tHit = (Float)tShapeHit;
+    */
+
     return true;
  }
-}
 
 bool DistanceEstimator::IntersectP(const Ray &r, bool testAlphaTexture) const {
+
+
     ProfilePhase p(Prof::ShapeIntersectP);
     Float phi;
     Point3f pHit;
@@ -205,8 +248,7 @@ bool DistanceEstimator::IntersectP(const Ray &r, bool testAlphaTexture) const {
     // Initialize _EFloat_ ray coordinate values
     EFloat ox(ray.o.x, oErr.x), oy(ray.o.y, oErr.y), oz(ray.o.z, oErr.z);
     EFloat dx(ray.d.x, dErr.x), dy(ray.d.y, dErr.y), dz(ray.d.z, dErr.z);
-    EFloat a = dx * dx + dy * dy + dz * dz;
-    EFloat b = 2 * (dx * ox + dy * oy + dz * oz);
+    EFloat a = dx * dx + dy * dy + dz * dz; EFloat b = 2 * (dx * ox + dy * oy + dz * oz);
     EFloat c = ox * ox + oy * oy + oz * oz - EFloat(radius) * EFloat(radius);
 
     // Solve quadratic equation for _t_ values
@@ -348,7 +390,7 @@ Float DistanceEstimator::Pdf(const Interaction &ref, const Vector3f &wi) const {
     // Compute general sphere PDF
     Float sinThetaMax2 = radius * radius / DistanceSquared(ref.p, pCenter);
     Float cosThetaMax = std::sqrt(std::max((Float)0, 1 - sinThetaMax2));
-    return UniformConePdf(cosThetaMax);
+    return UniformConePdf(cosThetaMax);  
 }
 
 Float DistanceEstimator::SolidAngle(const Point3f &p, int nSamples) const {
@@ -363,11 +405,7 @@ Float DistanceEstimator::SolidAngle(const Point3f &p, int nSamples) const {
 std::shared_ptr<Shape> CreateDistanceEstimatorShape(const Transform *o2w,
                                          const Transform *w2o,
                                          bool reverseOrientation,
-                                         const ParamSet &params,
-                                         const int maxIters,
-                                         const float hitEpsilon,
-                                         const float rayEpsilonMultipler,
-                                         const float normalEpsilon)
+                                         const ParamSet &params)
                                           {
     Float radius = params.FindOneFloat("radius", 1.f);
     Float zmin = params.FindOneFloat("zmin", -radius);
@@ -378,16 +416,34 @@ std::shared_ptr<Shape> CreateDistanceEstimatorShape(const Transform *o2w,
     Float rayEpsilonMultiplier = params.FindOneFloat("rayEpsilonMultiplier", 0.000001f);
     Float normalEpsilon = params.FindOneFloat("normalEpsilon", 0.000001f);
 
-    return std::make_shared<DistanceEstimator>(o2w, w2o, reverseOrientation, radius, zmin,
-                                    zmax, phimax);
+    return std::make_shared<DistanceEstimator>(o2w, w2o, reverseOrientation, radius, zmin, zmax, phimax,maxIters,hitEpsilon,rayEpsilonMultiplier,normalEpsilon);
 }
 
 
-//Distance Estimator
+ //Distance Estimator
+  Float DistanceEstimator::Evaluate (const Point3f &p) const {
+        float distance = std::sqrt(p.x * p.x + p.y*p.y + p.z*p.z) - radius;
+        return distance;
+  }
 
-Float DistanceEstimator::Evaluate (const Point3f &p) const {
-      float distance = p.x * p.x + p.y*p.y + p.z*p.z - radius;
-      return distance;
-}
+
+
+  //surface normal
+  Vector3f DistanceEstimator::CalculateNormal(const Point3f& pos, float eps, 
+         const Vector3f& defaultNormal) const {
+  const Vector3f v1 = Vector3f( 1.0,-1.0,-1.0);
+  const Vector3f v2 = Vector3f(-1.0,-1.0, 1.0);
+  const Vector3f v3 = Vector3f(-1.0, 1.0,-1.0);
+  const Vector3f v4 = Vector3f( 1.0, 1.0, 1.0);
+  
+  const Vector3f normal = v1 * Evaluate( pos + v1*eps ) +
+               v2 * Evaluate( pos + v2*eps ) +
+               v3 * Evaluate( pos + v3*eps ) +
+               v4 * Evaluate( pos + v4*eps );
+  const Float length = normal.Length();
+
+     return length > 0 ? (normal/length) : defaultNormal;
+
+  }
 
 }  // namespace pbrt

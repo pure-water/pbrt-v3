@@ -49,24 +49,25 @@ class DistanceEstimator : public Shape {
     // DistanceEstimator Public Methods
      DistanceEstimator(const Transform *ObjectToWorld, const Transform *WorldToObject,
            bool reverseOrientation, Float radius, Float zMin, Float zMax,
-           Float phiMax)
+           Float phiMax,int maxIters, float hitEpsilon, float rayEpsilonMultiplier, float normalEpsilon)
           : Shape(ObjectToWorld, WorldToObject, reverseOrientation),
           radius(radius),
           zMin(Clamp(std::min(zMin, zMax), -radius, radius)),
           zMax(Clamp(std::max(zMin, zMax), -radius, radius)),
           thetaMin(std::acos(Clamp(std::min(zMin, zMax) / radius, -1, 1))),
           thetaMax(std::acos(Clamp(std::max(zMin, zMax) / radius, -1, 1))),
-          phiMax(Radians(Clamp(phiMax, 0, 360)))
+          phiMax(Radians(Clamp(phiMax, 0, 360))),
+          maxIters(maxIters),
+          hitEpsilon(hitEpsilon),
+          rayEpsilonMultiplier(rayEpsilonMultiplier),
+          normalEpsilon(normalEpsilon)
           {}
 
     Bounds3f ObjectBound() const;
-    bool Intersect(const Ray &ray, Float *tHit, SurfaceInteraction *isect,
-                   bool testAlphaTexture) const;
-    bool IntersectP(const Ray &ray, bool testAlphaTexture) const;
-    Float Area() const;
+    bool Intersect(const Ray &ray, Float *tHit, SurfaceInteraction *isect, bool testAlphaTexture) const;
+    bool IntersectP(const Ray &ray, bool testAlphaTexture) const; Float Area() const;
     Interaction Sample(const Point2f &u, Float *pdf) const;
-    Interaction Sample(const Interaction &ref, const Point2f &u,
-                       Float *pdf) const;
+    Interaction Sample(const Interaction &ref, const Point2f &u, Float *pdf) const;
     Float Pdf(const Interaction &ref, const Vector3f &wi) const;
     Float SolidAngle(const Point3f &p, int nSamples) const;
 
@@ -74,24 +75,22 @@ class DistanceEstimator : public Shape {
     //distance estimator
     Float Evaluate(const Point3f &p) const;
 
+    Vector3f CalculateNormal(const Point3f& pos, float eps, const Vector3f& defaultNormal) const ;
 
   private:
     // DistanceEstimator Private Data
     const Float radius;
     const Float zMin, zMax;
     const Float thetaMin, thetaMax, phiMax; 
-
+    const int maxIters;
+    const Float hitEpsilon,rayEpsilonMultiplier,normalEpsilon;
 
 };
 
 std::shared_ptr<Shape> CreateDistanceEstimatorShape(const Transform *o2w,
                                          const Transform *w2o,
                                          bool reverseOrientation,
-                                         const ParamSet &params,
-                                         int maxIters, // Number of steps along the ray until we give up (default 1000)
-                                         float hitEpsilon, // how close to the surface we must be before we say we "hit" it 
-                                         float rayEpsilonMultiplier, // how much we multiply hitEpsilon by to get pError 
-                                         float normalEpsilon // The epsilon we send to CalculateNormal()
+                                         const ParamSet &params
                                          );
 
 }  // namespace pbrt
