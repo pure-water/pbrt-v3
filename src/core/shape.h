@@ -82,6 +82,10 @@ class Shape {
     // used in this case.
     virtual Float SolidAngle(const Point3f &p, int nSamples = 512) const;
 
+
+    //use for distance estimator
+    //virtual Float Evaluate (const Point3f &p) const;
+
     // Shape Public Data
     const Transform *ObjectToWorld, *WorldToObject;
     const bool reverseOrientation;

@@ -428,13 +428,13 @@ std::vector<std::shared_ptr<Shape>> MakeShapes(const std::string &name,
                                                const Transform *object2world,
                                                const Transform *world2object,
                                                bool reverseOrientation,
-                                               const ParamSet &paramSet) {
+                                               const ParamSet &paramSet
+                                               ) {
     std::vector<std::shared_ptr<Shape>> shapes;
     std::shared_ptr<Shape> s;
 
     if (name == "sphere")
-        s = CreateSphereShape(object2world, world2object, reverseOrientation,
-                              paramSet);
+        s = CreateSphereShape(object2world, world2object, reverseOrientation,paramSet);
 
     else if (name == "distanceestimator")
          s = CreateDistanceEstimatorShape(object2world, world2object, reverseOrientation,paramSet);
