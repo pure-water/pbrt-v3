@@ -52,7 +52,7 @@ bool DistanceEstimator::Intersect(const Ray &r, Float *tHit, SurfaceInteraction 
   Vector3f oErr, dErr;
 
   // float t ;y
-  //Ray ray = (*WorldToObject)(r, &oErr, &dErr);
+
   Ray ray = r; 
 
  
@@ -60,21 +60,21 @@ bool DistanceEstimator::Intersect(const Ray &r, Float *tHit, SurfaceInteraction 
   float   d        = Evaluate(ray.o);
   Point3f p        = ray.o;
   Point3f pHit     = p; 
-  float tShapeHit   = 0;  
+  float tShapeHit  = 0;  
 
- //RayMarching from the origin 
+   //RayMarching from the origin 
 
-  std::cout <<" max iters is " << maxIters << std::endl;
-  std::cout <<"ray.tMax is   " << ray.tMax << std::endl;  
-  std::cout <<"hitEpsilon is " <<hitEpsilon << std::endl;  
-  std::cout <<"ray.origin is    " << ray.o.x << ", "  << ray.o.y <<", " << ray.o.z <<";"<< std::endl;  
+  // std::cout <<" max iters is "      << maxIters  << std::endl;
+  // std::cout <<"ray.tMax is   "      << ray.tMax  << std::endl;  
+  // std::cout <<"hitEpsilon is "      << hitEpsilon << std::endl;  
+  // std::cout <<"ray.origin is    "   << ray.o.x   << ", "  << ray.o.y <<", " << ray.o.z <<";"<< std::endl;  
 
   for (int iter = 0; iter < maxIters ; iter++ ) {
 
 
      if( d < hitEpsilon) {   //hit position
         pHit = p; 
-        std::cout<<" ray marching done with iter number" << iter<<std::endl;
+        //std::cout<<" ray marching done with iter number" << iter<<std::endl;
      }
 
      else {
@@ -82,24 +82,25 @@ bool DistanceEstimator::Intersect(const Ray &r, Float *tHit, SurfaceInteraction 
         if ( d < ray.tMax){
 
             p = p +  d * r.d;
+
             tShapeHit += d;
-
             d = Evaluate(p)/ray.d.Length();
-
-            std::cout<<" d == " <<  d <<  " with iter  = " << iter<<std::endl;
 
         }
         else {
-          pHit = ray.o + ray.tMax/ray.d.Length() * ray.d;
-          std::cout<<" ray marching miss with iter number" << iter<<std::endl;
-          break;
+          return false;
         }
 
      }
 
   }
 
-  std::cout <<"  tShapeHit " << tShapeHit << std::endl;
+  //std::cout <<"  tShapeHit " << tShapeHit << std::endl;
+  //std::cout <<"  pHit "      << pHit << std::endl;
+  // tShapeHit = 1.0e3;
+  // pHit      = Point3f(0,0,2.3);
+  //  std::cout <<"  tShapeHit " << tShapeHit << std::endl;
+  //  std::cout <<"  pHit " << pHit << std::endl;
 
   // Compute error bounds for sphere intersection
   Vector3f pError = gamma(5) * Abs((Vector3f)pHit);
@@ -109,17 +110,28 @@ bool DistanceEstimator::Intersect(const Ray &r, Float *tHit, SurfaceInteraction 
   Normal3f dndu = Normal3f(0,0,0);
   Normal3f dndv = Normal3f(0,0,0); 
 
-  Vector3f dpdu = Vector3f(0,1,0);
-  Vector3f dpdv = Vector3f(1,0,0);
+  Vector3f cnormal = CalculateNormal(pHit, normalEpsilon, -ray.d);  
+
+  Vector3f dpdu = cnormal;  
+  Vector3f dpdv = (Cross(cnormal,ray.d));  //fake dpdu,dpdv to yield the  final normal 
 
   // Initialize _SurfaceInteraction_ from parametric information
-  *isect = SurfaceInteraction(pHit, pError, Point2f(u, v), -r.d, dpdu, dpdv, dndu, dndv, r.time, this);
+  // std::cout <<"  Surface Interaction start "  << std::endl;
+  // std::cout << "dpdu.x "  <<dpdu.x  << " dpdu.y "  <<dpdu.y << " dpdu.z "  <<dpdu.z << std::endl;
+  // std::cout << "ray.d.x " <<dpdv.x  << " ray.d.y "  <<dpdv.y << " dpdv.z "  <<ray.d.z << std::endl;
+  // std::cout << "dpdv.x "  <<dpdv.x  << " dpdv.y "  <<dpdv.y << " dpdv.z "  <<dpdv.z << std::endl;
+  // Normal3f dudv_cross =  Normal3f(Normalize(Cross(dpdu, dpdv)));
+  // std::cout << "cross.x "  <<dudv_cross.x  << " cross.y "  <<dudv_cross.y << " cross.z "  <<dudv_cross.z << std::endl;
 
- // Update _tHit_ for quadric intersection
-  *tHit = tShapeHit;
 
+   *isect = SurfaceInteraction(pHit, pError, Point2f(u, v), -ray.d, dpdu, dpdv, dndu, dndv, ray.time, this);
 
-  std::cout <<"  surface  intersect done " << std::endl;
+   // Update _tHit_ for quadric intersection
+   if (tHit != NULL ) {
+     *tHit = tShapeHit;
+   }
+   return true;
+   //std::cout <<"  surface  intersect done " << std::endl;
 
  /*
     ProfilePhase p(Prof::ShapeIntersect);
@@ -210,7 +222,7 @@ bool DistanceEstimator::Intersect(const Ray &r, Float *tHit, SurfaceInteraction 
     Float g = Dot(N, d2Pdvv);
 
     // Compute $\dndu$ and $\dndv$ from fundamental form coefficients
-    Float invEGF2 = 1 / (E * G - F * F);
+    Float invEGF2 = 1 / (E * 神马矿机G - F * F);
     Normal3f dndu = Normal3f((f * F - e * G) * invEGF2 * dpdu +
                              (e * F - f * E) * invEGF2 * dpdv);
     Normal3f dndv = Normal3f((g * F - f * G) * invEGF2 * dpdu +
@@ -228,14 +240,47 @@ bool DistanceEstimator::Intersect(const Ray &r, Float *tHit, SurfaceInteraction 
 
     // Update _tHit_ for quadric intersection
     *tHit = (Float)tShapeHit;
-    */
 
     return true;
+    */
  }
 
 bool DistanceEstimator::IntersectP(const Ray &r, bool testAlphaTexture) const {
 
+// not an engineering point of view 
+    
+//    Intersect(const Ray &r, null, null, false); 
 
+  float   d        = Evaluate(r.o);
+  Point3f p        = r.o;
+  float tShapeHit  = 0;  
+
+  for (int iter = 0; iter < maxIters ; iter++ ) {
+
+     if( d < hitEpsilon) {   //hit position
+        return true;
+     }
+
+     else {
+
+        if ( d < r.tMax){
+
+            p = p +  d * r.d;
+            tShapeHit += d;
+
+            d = Evaluate(p)/r.d.Length();
+        }
+        else {
+          return false;
+        }
+
+     }
+
+  }
+
+
+
+/* this is the spere implementation
     ProfilePhase p(Prof::ShapeIntersectP);
     Float phi;
     Point3f pHit;
@@ -291,9 +336,10 @@ bool DistanceEstimator::IntersectP(const Ray &r, bool testAlphaTexture) const {
             return false;
     }
     return true;
+*/
 }
 
-Float DistanceEstimator::Area() const { return phiMax * radius * (zMax - zMin); }
+Float DistanceEstimator::Area() const { std::cout<<"Area is " << phiMax * radius * (zMax - zMin) << std::endl; return phiMax * radius * (zMax - zMin); }
 
 Interaction DistanceEstimator::Sample(const Point2f &u, Float *pdf) const {
     Point3f pObj = Point3f(0, 0, 0) + radius * UniformSampleSphere(u);
@@ -429,8 +475,7 @@ std::shared_ptr<Shape> CreateDistanceEstimatorShape(const Transform *o2w,
 
 
   //surface normal
-  Vector3f DistanceEstimator::CalculateNormal(const Point3f& pos, float eps, 
-         const Vector3f& defaultNormal) const {
+  Vector3f DistanceEstimator::CalculateNormal(const Point3f& pos, float eps, const Vector3f& defaultNormal) const {
   const Vector3f v1 = Vector3f( 1.0,-1.0,-1.0);
   const Vector3f v2 = Vector3f(-1.0,-1.0, 1.0);
   const Vector3f v3 = Vector3f(-1.0, 1.0,-1.0);
@@ -441,6 +486,8 @@ std::shared_ptr<Shape> CreateDistanceEstimatorShape(const Transform *o2w,
                v3 * Evaluate( pos + v3*eps ) +
                v4 * Evaluate( pos + v4*eps );
   const Float length = normal.Length();
+
+     //std::cout << "cnorma length is " << length << std::endl;
 
      return length > 0 ? (normal/length) : defaultNormal;
 
