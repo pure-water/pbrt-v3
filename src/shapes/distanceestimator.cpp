@@ -42,8 +42,9 @@ namespace pbrt {
 
 // Sphere Method Definitions
 Bounds3f DistanceEstimator::ObjectBound() const {
-    return Bounds3f(Point3f(-radius, -radius, zMin),
-                    Point3f(radius, radius, zMax));
+    std::cout<<"create bounding box"<<std::endl;
+    return Bounds3f(Point3f(-radius, -radius, -radius),
+                    Point3f(radius, radius, radius));
 }
 
 bool DistanceEstimator::Intersect(const Ray &r, Float *tHit, SurfaceInteraction *isect, bool testAlphaTexture) const {
@@ -53,38 +54,46 @@ bool DistanceEstimator::Intersect(const Ray &r, Float *tHit, SurfaceInteraction 
 
   // float t ;y
 
-  Ray ray = r; 
+  //Ray ray = (*WorldToObject) (r,&oErr,&dErr); 
+  Ray ray = r;
 
- 
+  //std::cout<<"Intersect Testing ... "<<std::endl;
 
   float   d        = Evaluate(ray.o);
+
+  std::cout<<"ray.d is ("<<ray.d.x << ",  " << ray.d.y << ",   " << ray.d.z << ")" << std::endl;
   Point3f p        = ray.o;
   Point3f pHit     = p; 
   float tShapeHit  = 0;  
 
-   //RayMarching from the origin 
+   //Ray Marching from the origin 
+
+  // std::cout <<" zMin "      << zMin  << std::endl;
+  // std::cout <<" zMax "      << zMax  << std::endl;
 
   // std::cout <<" max iters is "      << maxIters  << std::endl;
   // std::cout <<"ray.tMax is   "      << ray.tMax  << std::endl;  
   // std::cout <<"hitEpsilon is "      << hitEpsilon << std::endl;  
   // std::cout <<"ray.origin is    "   << ray.o.x   << ", "  << ray.o.y <<", " << ray.o.z <<";"<< std::endl;  
 
+  bool bHit = false;
+
   for (int iter = 0; iter < maxIters ; iter++ ) {
 
 
-     if( d < hitEpsilon) {   //hit position
+     if( d <= hitEpsilon) {   //hit position
         pHit = p; 
-        //std::cout<<" ray marching done with iter number" << iter<<std::endl;
+        bHit = true;
      }
 
      else {
 
         if ( d < ray.tMax){
 
-            p = p +  d * r.d;
+            p += d/ray.d.Length() * r.d;
 
-            tShapeHit += d;
-            d = Evaluate(p)/ray.d.Length();
+            tShapeHit += d/ray.d.Length();
+            d = Evaluate(p);
 
         }
         else {
@@ -94,6 +103,8 @@ bool DistanceEstimator::Intersect(const Ray &r, Float *tHit, SurfaceInteraction 
      }
 
   }
+
+  if (bHit == false) {return false;}
 
   //std::cout <<"  tShapeHit " << tShapeHit << std::endl;
   //std::cout <<"  pHit "      << pHit << std::endl;
@@ -124,13 +135,12 @@ bool DistanceEstimator::Intersect(const Ray &r, Float *tHit, SurfaceInteraction 
   // std::cout << "cross.x "  <<dudv_cross.x  << " cross.y "  <<dudv_cross.y << " cross.z "  <<dudv_cross.z << std::endl;
 
 
-   *isect = SurfaceInteraction(pHit, pError, Point2f(u, v), -ray.d, dpdu, dpdv, dndu, dndv, ray.time, this);
+   *isect = (*ObjectToWorld) (SurfaceInteraction(pHit, pError, Point2f(u, v), -ray.d, dpdu, dpdv, dndu, dndv, ray.time, this));
 
    // Update _tHit_ for quadric intersection
-   if (tHit != NULL ) {
-     *tHit = tShapeHit;
-   }
+   *tHit = tShapeHit;
    return true;
+
    //std::cout <<"  surface  intersect done " << std::endl;
 
  /*
@@ -179,7 +189,7 @@ bool DistanceEstimator::Intersect(const Ray &r, Float *tHit, SurfaceInteraction 
         tShapeHit = t1;
         // Compute sphere hit position and $\phi$
         pHit = ray((Float)tShapeHit);
-
+A quick note: IntersectP() is used by pbrt when casting shadow rays; since shadow rays only need to know if there was any hit before their tMax value, pbrt does not need the tHit value or a SurfaceInteraction describing the hitpoint. The default im
         // Refine sphere intersection point
         pHit *= radius / Distance(pHit, Point3f(0, 0, 0));
         if (pHit.x == 0 && pHit.y == 0) pHit.x = 1e-5f * radius;
@@ -255,6 +265,9 @@ bool DistanceEstimator::IntersectP(const Ray &r, bool testAlphaTexture) const {
   Point3f p        = r.o;
   float tShapeHit  = 0;  
 
+  std::cout<<"Shadow Ray Testing ... "<<std::endl;
+
+
   for (int iter = 0; iter < maxIters ; iter++ ) {
 
      if( d < hitEpsilon) {   //hit position
@@ -265,10 +278,9 @@ bool DistanceEstimator::IntersectP(const Ray &r, bool testAlphaTexture) const {
 
         if ( d < r.tMax){
 
-            p = p +  d * r.d;
-            tShapeHit += d;
-
-            d = Evaluate(p)/r.d.Length();
+            p = p +  d/r.d.Length() * r.d;
+            tShapeHit += d/r.d.Length();
+            d = Evaluate(p);
         }
         else {
           return false;
@@ -278,7 +290,7 @@ bool DistanceEstimator::IntersectP(const Ray &r, bool testAlphaTexture) const {
 
   }
 
-
+  return false;
 
 /* this is the spere implementation
     ProfilePhase p(Prof::ShapeIntersectP);
@@ -454,13 +466,16 @@ std::shared_ptr<Shape> CreateDistanceEstimatorShape(const Transform *o2w,
                                          const ParamSet &params)
                                           {
     Float radius = params.FindOneFloat("radius", 1.f);
-    Float zmin = params.FindOneFloat("zmin", -radius);
-    Float zmax = params.FindOneFloat("zmax", radius);
+    Float zmin = params.FindOneFloat("zmin", -1.0 * radius);
+    Float zmax = params.FindOneFloat("zmax", 1.0 * radius);
     Float phimax = params.FindOneFloat("phimax", 360.f);
-    int maxIters = params.FindOneInt("maxIters", 1000);
-    Float hitEpsilon = params.FindOneFloat("hitEpsilon", 0.000001f);
-    Float rayEpsilonMultiplier = params.FindOneFloat("rayEpsilonMultiplier", 0.000001f);
-    Float normalEpsilon = params.FindOneFloat("normalEpsilon", 0.000001f);
+    int maxIters = params.FindOneInt("maxiters", 100000);
+    //Float hitEpsilon = params.FindOneFloat("hitEpsilon", 0.000000001f);
+    Float hitEpsilon = params.FindOneFloat("hitEpsilon", 0.000000000001f);
+    Float rayEpsilonMultiplier = params.FindOneFloat("rayEpsilonMultiplier", 10000);
+    Float normalEpsilon = params.FindOneFloat("normalEpsilon", 0.0001f);
+     
+   std::cout <<"creating distance estimator shape" << std::endl;
 
     return std::make_shared<DistanceEstimator>(o2w, w2o, reverseOrientation, radius, zmin, zmax, phimax,maxIters,hitEpsilon,rayEpsilonMultiplier,normalEpsilon);
 }
@@ -468,7 +483,7 @@ std::shared_ptr<Shape> CreateDistanceEstimatorShape(const Transform *o2w,
 
  //Distance Estimator
   Float DistanceEstimator::Evaluate (const Point3f &p) const {
-        float distance = std::sqrt(p.x * p.x + p.y*p.y + p.z*p.z) - radius;
+        float distance = std::abs(std::sqrt(p.x * p.x + p.y*p.y + p.z*p.z) - radius);
         return distance;
   }
 
