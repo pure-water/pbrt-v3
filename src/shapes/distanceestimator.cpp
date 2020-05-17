@@ -114,17 +114,31 @@ bool DistanceEstimator::Intersect(const Ray &r, Float *tHit, SurfaceInteraction 
   //  std::cout <<"  pHit " << pHit << std::endl;
 
   // Compute error bounds for sphere intersection
-  Vector3f pError = gamma(5) * Abs((Vector3f)pHit);
+  //Vector3f pError = gamma(5) * Abs((Vector3f)pHit);
+  Vector3f pError = 10.0* Vector3f(hitEpsilon,hitEpsilon,hitEpsilon); 
 
   float u = 0;
   float v = 0; 
   Normal3f dndu = Normal3f(0,0,0);
   Normal3f dndv = Normal3f(0,0,0); 
 
-  Vector3f cnormal = CalculateNormal(pHit, normalEpsilon, -ray.d);  
+  Vector3f cnormal = CalculateNormal(pHit, normalEpsilon, ray.d/ray.d.Length());  
+  Vector3f dpdu,dpdv;
 
-  Vector3f dpdu = cnormal;  
-  Vector3f dpdv = (Cross(cnormal,ray.d));  //fake dpdu,dpdv to yield the  final normal 
+  CoordinateSystem(cnormal, &dpdu, &dpdv);
+
+  Vector3f cnormal2 = Cross(dpdu, dpdv);
+
+  if (cnormal.x != cnormal2.x || cnormal.y != cnormal2.y || cnormal.z != cnormal2.z) {
+      
+      std::cout <<"Wrong Coordiante System" << std::endl;
+
+      std::cout << "cnormal.x "  <<cnormal.y  << " cnormal.y "  <<cnormal.y << " cnormal.z "  <<cnormal.z << std::endl;
+      std::cout << "cnormal2.x "  <<cnormal2.y  << " cnormal2.y "  <<cnormal2.y << " cnormal2.z "  <<cnormal2.z << std::endl;
+
+
+  }
+  // std::cout << "ray.d.x " <<dpdv.x  << " ray.d.y "  <<dpdv.y << " dpdv.z "  <<ray.d.z << std::endl;
 
   // Initialize _SurfaceInteraction_ from parametric information
   // std::cout <<"  Surface Interaction start "  << std::endl;
@@ -135,7 +149,7 @@ bool DistanceEstimator::Intersect(const Ray &r, Float *tHit, SurfaceInteraction 
   // std::cout << "cross.x "  <<dudv_cross.x  << " cross.y "  <<dudv_cross.y << " cross.z "  <<dudv_cross.z << std::endl;
 
 
-   *isect = (*ObjectToWorld) (SurfaceInteraction(pHit, pError, Point2f(u, v), -ray.d, dpdu, dpdv, dndu, dndv, ray.time, this));
+   *isect = (SurfaceInteraction(pHit, pError, Point2f(u, v), -ray.d, dpdu, dpdv, dndu, dndv, ray.time, this));
 
    // Update _tHit_ for quadric intersection
    *tHit = tShapeHit;
@@ -471,9 +485,17 @@ std::shared_ptr<Shape> CreateDistanceEstimatorShape(const Transform *o2w,
     Float phimax = params.FindOneFloat("phimax", 360.f);
     int maxIters = params.FindOneInt("maxiters", 100000);
     //Float hitEpsilon = params.FindOneFloat("hitEpsilon", 0.000000001f);
-    Float hitEpsilon = params.FindOneFloat("hitEpsilon", 0.000000000001f);
+    //Float hitEpsilon = params.FindOneFloat("hitEpsilon", 0.000000000001f);
+    //Float hitEpsilon = params.FindOneFloat("hitEpsilon", 0.0000000001f);
+    //Float hitEpsilon = params.FindOneFloat("hitEpsilon", 0.00000000000000001f);
+    Float hitEpsilon = params.FindOneFloat("hitEpsilon", 0.00001f);
     Float rayEpsilonMultiplier = params.FindOneFloat("rayEpsilonMultiplier", 10000);
-    Float normalEpsilon = params.FindOneFloat("normalEpsilon", 0.0001f);
+    //Float normalEpsilon = params.FindOneFloat("normalEpsilon", 0.0001f);  //a nice picture
+    //Float normalEpsilon = params.FindOneFloat("normalEpsilon", 0.001f);  //a nice picture
+    //Float normalEpsilon = params.FindOneFloat("normalEpsilon", 0.00001f);  //a nice picture
+    //Float normalEpsilon = params.FindOneFloat("normalEpsilon", 0.000000001f);  //a nice picture
+    Float normalEpsilon = params.FindOneFloat("normalEpsilon", 0.0000000000001f);  //a nice picture
+
      
    std::cout <<"creating distance estimator shape" << std::endl;
 
