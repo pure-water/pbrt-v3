@@ -61,7 +61,7 @@ bool DistanceEstimator::Intersect(const Ray &r, Float *tHit, SurfaceInteraction 
 
   float   d        = Evaluate(ray.o);
 
-  std::cout<<"ray.d is ("<<ray.d.x << ",  " << ray.d.y << ",   " << ray.d.z << ")" << std::endl;
+  //std::cout<<"ray.d is ("<<ray.d.x << ",  " << ray.d.y << ",   " << ray.d.z << ")" << std::endl;
   Point3f p        = ray.o;
   Point3f pHit     = p; 
   float tShapeHit  = 0;  
@@ -129,6 +129,7 @@ bool DistanceEstimator::Intersect(const Ray &r, Float *tHit, SurfaceInteraction 
 
   Vector3f cnormal2 = Cross(dpdu, dpdv);
 
+/*
   if (cnormal.x != cnormal2.x || cnormal.y != cnormal2.y || cnormal.z != cnormal2.z) {
       
       std::cout <<"Wrong Coordiante System" << std::endl;
@@ -138,6 +139,8 @@ bool DistanceEstimator::Intersect(const Ray &r, Float *tHit, SurfaceInteraction 
 
 
   }
+*/
+
   // std::cout << "ray.d.x " <<dpdv.x  << " ray.d.y "  <<dpdv.y << " dpdv.z "  <<ray.d.z << std::endl;
 
   // Initialize _SurfaceInteraction_ from parametric information
@@ -279,7 +282,7 @@ bool DistanceEstimator::IntersectP(const Ray &r, bool testAlphaTexture) const {
   Point3f p        = r.o;
   float tShapeHit  = 0;  
 
-  std::cout<<"Shadow Ray Testing ... "<<std::endl;
+  //std::cout<<"Shadow Ray Testing ... "<<std::endl;
 
 
   for (int iter = 0; iter < maxIters ; iter++ ) {
@@ -484,17 +487,14 @@ std::shared_ptr<Shape> CreateDistanceEstimatorShape(const Transform *o2w,
     Float zmax = params.FindOneFloat("zmax", 1.0 * radius);
     Float phimax = params.FindOneFloat("phimax", 360.f);
     int maxIters = params.FindOneInt("maxiters", 100000);
-    //Float hitEpsilon = params.FindOneFloat("hitEpsilon", 0.000000001f);
-    //Float hitEpsilon = params.FindOneFloat("hitEpsilon", 0.000000000001f);
-    //Float hitEpsilon = params.FindOneFloat("hitEpsilon", 0.0000000001f);
-    //Float hitEpsilon = params.FindOneFloat("hitEpsilon", 0.00000000000000001f);
-    Float hitEpsilon = params.FindOneFloat("hitEpsilon", 0.00001f);
+
+
+    //?? For magic reasons, I pick this 
+    //?? The 2 epsilons here are really magic
+    //?? Any offset will make the final render image does not work 
+    Float hitEpsilon = params.FindOneFloat("hitEpsilon", 0.001f);
     Float rayEpsilonMultiplier = params.FindOneFloat("rayEpsilonMultiplier", 10000);
-    //Float normalEpsilon = params.FindOneFloat("normalEpsilon", 0.0001f);  //a nice picture
-    //Float normalEpsilon = params.FindOneFloat("normalEpsilon", 0.001f);  //a nice picture
-    //Float normalEpsilon = params.FindOneFloat("normalEpsilon", 0.00001f);  //a nice picture
-    //Float normalEpsilon = params.FindOneFloat("normalEpsilon", 0.000000001f);  //a nice picture
-    Float normalEpsilon = params.FindOneFloat("normalEpsilon", 0.0000000000001f);  //a nice picture
+    Float normalEpsilon = params.FindOneFloat("normalEpsilon", 0.00001f);  //a nice picture
 
      
    std::cout <<"creating distance estimator shape" << std::endl;
