@@ -32,7 +32,8 @@
 
 
 // shapes/sphere.cpp*
-#include "shapes/distanceestimator.h"
+//#include "shapes/distanceestimator.h"
+#include "shapes/spherede.h"
 #include "sampling.h"
 #include "paramset.h"
 #include "efloat.h"
@@ -41,19 +42,17 @@
 namespace pbrt {
 
 // Sphere Method Definitions
-
-Bounds3f DistanceEstimator::ObjectBound() const {
+Bounds3f SphereDE::ObjectBound() const {
     std::cout<<"create bounding box"<<std::endl;
-    return Bounds3f(Point3f(-radius, -radius, -radius),
-                    Point3f(radius, radius, radius));
+    return Bounds3f(Point3f(-radius, -radius, -radius), Point3f(radius, radius, radius));
 }
 
-bool DistanceEstimator::Intersect(const Ray &r, Float *tHit, SurfaceInteraction *isect, bool testAlphaTexture) const {
+bool SphereDE::Intersect(const Ray &r, Float *tHit, SurfaceInteraction *isect, bool testAlphaTexture) const {
 
-  // Transform _Ray_ to object space
   Vector3f oErr, dErr;
   Ray ray = r;
 
+  //std::cout<<"Intersect Testing ... "<<std::endl;
   float   d        = Evaluate(ray.o);
 
   Point3f p        = ray.o;
@@ -91,15 +90,6 @@ bool DistanceEstimator::Intersect(const Ray &r, Float *tHit, SurfaceInteraction 
 
   if (bHit == false) {return false;}
 
-  //std::cout <<"  tShapeHit " << tShapeHit << std::endl;
-  //std::cout <<"  pHit "      << pHit << std::endl;
-  // tShapeHit = 1.0e3;
-  // pHit      = Point3f(0,0,2.3);
-  //  std::cout <<"  tShapeHit " << tShapeHit << std::endl;
-  //  std::cout <<"  pHit " << pHit << std::endl;
-
-  // Compute error bounds for sphere intersection
-  //Vector3f pError = gamma(5) * Abs((Vector3f)pHit);
   Vector3f pError = 10.0* Vector3f(hitEpsilon,hitEpsilon,hitEpsilon); 
 
   float u = 0;
@@ -147,7 +137,7 @@ bool DistanceEstimator::Intersect(const Ray &r, Float *tHit, SurfaceInteraction 
 
  /*
     ProfilePhase p(Prof::ShapeIntersect);
-    Float phi;
+    Float phi;E
     Point3f pHit;
     // Transform _Ray_ to object space
     Vector3f oErr, dErr;
@@ -216,7 +206,7 @@ A quick note: IntersectP() is used by pbrt when casting shadow rays; since shado
     Vector3f dpdv =
         (thetaMax - thetaMin) *
         Vector3f(pHit.z * cosPhi, pHit.z * sinPhi, -radius * std::sin(theta));
-
+E
     // Compute sphere $\dndu$ and $\dndv$
     Vector3f d2Pduu = -phiMax * phiMax * Vector3f(pHit.x, pHit.y, 0);
     Vector3f d2Pduv =
@@ -257,7 +247,7 @@ A quick note: IntersectP() is used by pbrt when casting shadow rays; since shado
     */
  }
 
-bool DistanceEstimator::IntersectP(const Ray &r, bool testAlphaTexture) const {
+bool SphereDE::IntersectP(const Ray &r, bool testAlphaTexture) const {
 
 // not an engineering point of view 
     
@@ -353,9 +343,9 @@ bool DistanceEstimator::IntersectP(const Ray &r, bool testAlphaTexture) const {
 */
 }
 
-Float DistanceEstimator::Area() const { std::cout<<"Area is " << phiMax * radius * (zMax - zMin) << std::endl; return phiMax * radius * (zMax - zMin); }
+Float SphereDE::Area() const { std::cout<<"Area is " << phiMax * radius * (zMax - zMin) << std::endl; return phiMax * radius * (zMax - zMin); }
 
-Interaction DistanceEstimator::Sample(const Point2f &u, Float *pdf) const {
+Interaction SphereDE::Sample(const Point2f &u, Float *pdf) const {
     Point3f pObj = Point3f(0, 0, 0) + radius * UniformSampleSphere(u);
     Interaction it;
     it.n = Normalize((*ObjectToWorld)(Normal3f(pObj.x, pObj.y, pObj.z)));
@@ -368,7 +358,7 @@ Interaction DistanceEstimator::Sample(const Point2f &u, Float *pdf) const {
     return it;
 }
 
-Interaction DistanceEstimator::Sample(const Interaction &ref, const Point2f &u,
+Interaction SphereDE::Sample(const Interaction &ref, const Point2f &u,
                            Float *pdf) const {
     Point3f pCenter = (*ObjectToWorld)(Point3f(0, 0, 0));
 
@@ -439,7 +429,7 @@ Interaction DistanceEstimator::Sample(const Interaction &ref, const Point2f &u,
     return it;
 }
 
-Float DistanceEstimator::Pdf(const Interaction &ref, const Vector3f &wi) const {
+Float SphereDE::Pdf(const Interaction &ref, const Vector3f &wi) const {
     Point3f pCenter = (*ObjectToWorld)(Point3f(0, 0, 0));
     // Return uniform PDF if point is inside sphere
     Point3f pOrigin =
@@ -453,7 +443,7 @@ Float DistanceEstimator::Pdf(const Interaction &ref, const Vector3f &wi) const {
     return UniformConePdf(cosThetaMax);  
 }
 
-Float DistanceEstimator::SolidAngle(const Point3f &p, int nSamples) const {
+Float SphereDE::SolidAngle(const Point3f &p, int nSamples) const {
     Point3f pCenter = (*ObjectToWorld)(Point3f(0, 0, 0));
     if (DistanceSquared(p, pCenter) <= radius * radius)
         return 4 * Pi;
@@ -462,15 +452,14 @@ Float DistanceEstimator::SolidAngle(const Point3f &p, int nSamples) const {
     return (2 * Pi * (1 - cosTheta));
 }
 
-/*
-std::shared_ptr<Shape> CreateDistanceEstimatorShape(const Transform *o2w,
+std::shared_ptr<Shape> CreateSphereDEShape(const Transform *o2w,
                                          const Transform *w2o,
                                          bool reverseOrientation,
                                          const ParamSet &params)
                                           {
     Float radius = params.FindOneFloat("radius", 1.f);
-    Float zmin = params.FindOneFloat("zmin", -1.0 * radius);
-    Float zmax = params.FindOneFloat("zmax", 1.0 * radius);
+    Float zmin   = params.FindOneFloat("zmin", -1.0 * radius);
+    Float zmax   = params.FindOneFloat("zmax", 1.0 * radius);
     Float phimax = params.FindOneFloat("phimax", 360.f);
     int maxIters = params.FindOneInt("maxiters", 100000);
 
@@ -481,16 +470,16 @@ std::shared_ptr<Shape> CreateDistanceEstimatorShape(const Transform *o2w,
     Float hitEpsilon = params.FindOneFloat("hitEpsilon", 0.001f);
     Float rayEpsilonMultiplier = params.FindOneFloat("rayEpsilonMultiplier", 10000);
     Float normalEpsilon = params.FindOneFloat("normalEpsilon", 0.00001f);  //a nice picture
-     
-   std::cout <<"creating distance estimator shape" << std::endl;
 
-    return std::make_shared<DistanceEstimator>(o2w, w2o, reverseOrientation, radius, zmin, zmax, phimax,maxIters,hitEpsilon,rayEpsilonMultiplier,normalEpsilon);
+     
+   std::cout <<"creating  shape" << std::endl;
+
+    return std::make_shared<SphereDE>(o2w, w2o, reverseOrientation, radius, zmin, zmax, phimax,maxIters,hitEpsilon,rayEpsilonMultiplier,normalEpsilon);
 }
-*/
 
 
  //Distance Estimator
-  Float DistanceEstimator::Evaluate (const Point3f &p) const {
+  Float SphereDE::Evaluate (const Point3f &p) const {
         float distance = std::abs(std::sqrt(p.x * p.x + p.y*p.y + p.z*p.z) - radius);
         return distance;
   }
@@ -498,7 +487,7 @@ std::shared_ptr<Shape> CreateDistanceEstimatorShape(const Transform *o2w,
 
 
   //surface normal
-  Vector3f DistanceEstimator::CalculateNormal(const Point3f& pos, float eps, const Vector3f& defaultNormal) const {
+  Vector3f SphereDE::CalculateNormal(const Point3f& pos, float eps, const Vector3f& defaultNormal) const {
   const Vector3f v1 = Vector3f( 1.0,-1.0,-1.0);
   const Vector3f v2 = Vector3f(-1.0,-1.0, 1.0);
   const Vector3f v3 = Vector3f(-1.0, 1.0,-1.0);

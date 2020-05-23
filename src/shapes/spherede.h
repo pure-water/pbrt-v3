@@ -35,22 +35,23 @@
 #pragma once
 #endif
 
-#ifndef PBRT_SHAPES_DISTANCEESTIMATOR_H
-#define PBRT_SHAPES_DISTANCEESTIMATOR_H
+#ifndef PBRT_SHAPES_SPHERESDE_H
+#define PBRT_SHAPES_SPHERESDE_H
 
 // shapes/sphere.h*
-#include "shape.h"
+//#include "shape.h"
+#include "distanceestimator.h"
 
 namespace pbrt {
 
 // DistanceEstimator Declarations
-class DistanceEstimator : public Shape {
+class SphereDE : public DistanceEstimator {
   public:
     // DistanceEstimator Public Methods
-     DistanceEstimator(const Transform *ObjectToWorld, const Transform *WorldToObject,
+     SphereDE(const Transform *ObjectToWorld, const Transform *WorldToObject,
            bool reverseOrientation, Float radius, Float zMin, Float zMax,
            Float phiMax,int maxIters, float hitEpsilon, float rayEpsilonMultiplier, float normalEpsilon)
-          : Shape(ObjectToWorld, WorldToObject, reverseOrientation),
+          : DistanceEstimator(ObjectToWorld, WorldToObject, reverseOrientation,radius,zMin,zMax,phiMax,maxIters,hitEpsilon,rayEpsilonMultiplier,normalEpsilon),
           radius(radius),
           zMin(Clamp(std::min(zMin, zMax), -radius, radius)),
           zMax(Clamp(std::max(zMin, zMax), -radius, radius)),
@@ -63,20 +64,18 @@ class DistanceEstimator : public Shape {
           normalEpsilon(normalEpsilon)
           {}
 
-    virtual Bounds3f ObjectBound() const;
-    virtual Float Area() const;
-
     bool Intersect(const Ray &ray, Float *tHit, SurfaceInteraction *isect, bool testAlphaTexture) const;
     bool IntersectP(const Ray &ray, bool testAlphaTexture) const; 
     Interaction Sample(const Point2f &u, Float *pdf) const;
     Interaction Sample(const Interaction &ref, const Point2f &u, Float *pdf) const;
-
     Float Pdf(const Interaction &ref, const Vector3f &wi) const;
     Float SolidAngle(const Point3f &p, int nSamples) const;
 
 
     //distance estimator
-    virtual Float Evaluate(const Point3f &p) const;
+    Bounds3f ObjectBound() const;
+    Float Area() const;
+    Float Evaluate(const Point3f &p) const;
 
     Vector3f CalculateNormal(const Point3f& pos, float eps, const Vector3f& defaultNormal) const ;
 
@@ -90,13 +89,11 @@ class DistanceEstimator : public Shape {
 
 };
 
-/*
-std::shared_ptr<Shape> CreateDistanceEstimatorShape(const Transform *o2w,
+std::shared_ptr<Shape> CreateSphereDEShape(const Transform *o2w,
                                          const Transform *w2o,
                                          bool reverseOrientation,
                                          const ParamSet &params
                                          );
-*/
 
 }  // namespace pbrt
 
