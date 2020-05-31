@@ -104,244 +104,50 @@ bool SphereDE::Intersect(const Ray &r, Float *tHit, SurfaceInteraction *isect, b
 
   Vector3f cnormal2 = Cross(dpdu, dpdv);
 
-/*
-  if (cnormal.x != cnormal2.x || cnormal.y != cnormal2.y || cnormal.z != cnormal2.z) {
-      
-      std::cout <<"Wrong Coordiante System" << std::endl;
-
-      std::cout << "cnormal.x "  <<cnormal.y  << " cnormal.y "  <<cnormal.y << " cnormal.z "  <<cnormal.z << std::endl;
-      std::cout << "cnormal2.x "  <<cnormal2.y  << " cnormal2.y "  <<cnormal2.y << " cnormal2.z "  <<cnormal2.z << std::endl;
-
-
-  }
-*/
-
-  // std::cout << "ray.d.x " <<dpdv.x  << " ray.d.y "  <<dpdv.y << " dpdv.z "  <<ray.d.z << std::endl;
-
-  // Initialize _SurfaceInteraction_ from parametric information
-  // std::cout <<"  Surface Interaction start "  << std::endl;
-  // std::cout << "dpdu.x "  <<dpdu.x  << " dpdu.y "  <<dpdu.y << " dpdu.z "  <<dpdu.z << std::endl;
-  // std::cout << "ray.d.x " <<dpdv.x  << " ray.d.y "  <<dpdv.y << " dpdv.z "  <<ray.d.z << std::endl;
-  // std::cout << "dpdv.x "  <<dpdv.x  << " dpdv.y "  <<dpdv.y << " dpdv.z "  <<dpdv.z << std::endl;
-  // Normal3f dudv_cross =  Normal3f(Normalize(Cross(dpdu, dpdv)));
-  // std::cout << "cross.x "  <<dudv_cross.x  << " cross.y "  <<dudv_cross.y << " cross.z "  <<dudv_cross.z << std::endl;
-
-
    *isect = (SurfaceInteraction(pHit, pError, Point2f(u, v), -ray.d, dpdu, dpdv, dndu, dndv, ray.time, this));
 
    // Update _tHit_ for quadric intersection
    *tHit = tShapeHit;
    return true;
 
-   //std::cout <<"  surface  intersect done " << std::endl;
-
- /*
-    ProfilePhase p(Prof::ShapeIntersect);
-    Float phi;E
-    Point3f pHit;
-    // Transform _Ray_ to object space
-    Vector3f oErr, dErr;
-    Ray ray = (*WorldToObject)(r, &oErr, &dErr);
-
-    // Compute quadratic sphere coefficients
-
-    // Initialize _EFloat_ ray coordinate values
-    EFloat ox(ray.o.x, oErr.x), oy(ray.o.y, oErr.y), oz(ray.o.z, oErr.z);
-    EFloat dx(ray.d.x, dErr.x), dy(ray.d.y, dErr.y), dz(ray.d.z, dErr.z);
-    EFloat a = dx * dx + dy * dy + dz * dz;
-    EFloat b = 2 * (dx * ox + dy * oy + dz * oz);
-    EFloat c = ox * ox + oy * oy + oz * oz - EFloat(radius) * EFloat(radius);
-
-    // Solve quadratic equation for _t_ values
-    EFloat t0, t1;
-    if (!Quadratic(a, b, c, &t0, &t1)) return false;
-
-    // Check quadric shape _t0_ and _t1_ for nearest intersection
-    if (t0.UpperBound() > ray.tMax || t1.LowerBound() <= 0) return false;
-    EFloat tShapeHit = t0;
-    if (tShapeHit.LowerBound() <= 0) {
-        tShapeHit = t1;
-        if (tShapeHit.UpperBound() > ray.tMax) return false;
-    }
-
-    // Compute sphere hit position and $\phi$
-    pHit = ray((Float)tShapeHit);
-
-    // Refine sphere intersection point
-    pHit *= radius / Distance(pHit, Point3f(0, 0, 0));
-    if (pHit.x == 0 && pHit.y == 0) pHit.x = 1e-5f * radius;
-    phi = std::atan2(pHit.y, pHit.x);
-    if (phi < 0) phi += 2 * Pi;
-
-    // Test sphere intersection against clipping parameters
-    if ((zMin > -radius && pHit.z < zMin) || (zMax < radius && pHit.z > zMax) ||
-        phi > phiMax) {
-        if (tShapeHit == t1) return false;
-        if (t1.UpperBound() > ray.tMax) return false;
-        tShapeHit = t1;
-        // Compute sphere hit position and $\phi$
-        pHit = ray((Float)tShapeHit);
-A quick note: IntersectP() is used by pbrt when casting shadow rays; since shadow rays only need to know if there was any hit before their tMax value, pbrt does not need the tHit value or a SurfaceInteraction describing the hitpoint. The default im
-        // Refine sphere intersection point
-        pHit *= radius / Distance(pHit, Point3f(0, 0, 0));
-        if (pHit.x == 0 && pHit.y == 0) pHit.x = 1e-5f * radius;
-        phi = std::atan2(pHit.y, pHit.x);
-        if (phi < 0) phi += 2 * Pi;
-        if ((zMin > -radius && pHit.z < zMin) ||
-            (zMax < radius && pHit.z > zMax) || phi > phiMax)
-            return false;
-    }
-
-    // Find parametric representation of sphere hit
-    Float u = phi / phiMax;
-    Float theta = std::acos(Clamp(pHit.z / radius, -1, 1));
-    Float v = (theta - thetaMin) / (thetaMax - thetaMin);
-
-    // Compute sphere $\dpdu$ and $\dpdv$
-    Float zRadius = std::sqrt(pHit.x * pHit.x + pHit.y * pHit.y);
-    Float invZRadius = 1 / zRadius;
-    Float cosPhi = pHit.x * invZRadius;
-    Float sinPhi = pHit.y * invZRadius;
-    Vector3f dpdu(-phiMax * pHit.y, phiMax * pHit.x, 0);
-    Vector3f dpdv =
-        (thetaMax - thetaMin) *
-        Vector3f(pHit.z * cosPhi, pHit.z * sinPhi, -radius * std::sin(theta));
-E
-    // Compute sphere $\dndu$ and $\dndv$
-    Vector3f d2Pduu = -phiMax * phiMax * Vector3f(pHit.x, pHit.y, 0);
-    Vector3f d2Pduv =
-        (thetaMax - thetaMin) * pHit.z * phiMax * Vector3f(-sinPhi, cosPhi, 0.);
-    Vector3f d2Pdvv = -(thetaMax - thetaMin) * (thetaMax - thetaMin) *
-                      Vector3f(pHit.x, pHit.y, pHit.z);
-
-    // Compute coefficients for fundamental forms
-    Float E = Dot(dpdu, dpdu);
-    Float F = Dot(dpdu, dpdv);
-    Float G = Dot(dpdv, dpdv);
-    Vector3f N = Normalize(Cross(dpdu, dpdv));
-    Float e = Dot(N, d2Pduu);
-    Float f = Dot(N, d2Pduv);
-    Float g = Dot(N, d2Pdvv);
-
-    // Compute $\dndu$ and $\dndv$ from fundamental form coefficients
-    Float invEGF2 = 1 / (E * 神马矿机G - F * F);
-    Normal3f dndu = Normal3f((f * F - e * G) * invEGF2 * dpdu +
-                             (e * F - f * E) * invEGF2 * dpdv);
-    Normal3f dndv = Normal3f((g * F - f * G) * invEGF2 * dpdu +
-                             (f * F - g * E) * invEGF2 * dpdv);
-
-    // Compute error bounds for sphere intersection
-    Vector3f pError = gamma(5) * Abs((Vector3f)pHit);
-
-
-
-    // Initialize _SurfaceInteraction_ from parametric information
-    *isect = (*ObjectToWorld)(SurfaceInteraction(pHit, pError, Point2f(u, v),
-                                                 -ray.d, dpdu, dpdv, dndu, dndv,
-                                                 ray.time, this));
-
-    // Update _tHit_ for quadric intersection
-    *tHit = (Float)tShapeHit;
-
-    return true;
-    */
  }
 
-bool SphereDE::IntersectP(const Ray &r, bool testAlphaTexture) const {
-
-// not an engineering point of view 
-    
-//    Intersect(const Ray &r, null, null, false); 
-
-  float   d        = Evaluate(r.o);
-  Point3f p        = r.o;
-  float tShapeHit  = 0;  
-
-  //std::cout<<"Shadow Ray Testing ... "<<std::endl;
-
-
-  for (int iter = 0; iter < maxIters ; iter++ ) {
-
-     if( d < hitEpsilon) {   //hit position
-        return true;
-     }
-
-     else {
-
-        if ( d < r.tMax){
-
-            p = p +  d/r.d.Length() * r.d;
-            tShapeHit += d/r.d.Length();
-            d = Evaluate(p);
-        }
-        else {
-          return false;
-        }
-
-     }
-
-  }
-
-  return false;
-
-/* this is the spere implementation
-    ProfilePhase p(Prof::ShapeIntersectP);
-    Float phi;
-    Point3f pHit;
-    // Transform _Ray_ to object space
-    Vector3f oErr, dErr;
-    Ray ray = (*WorldToObject)(r, &oErr, &dErr);
-
-    // Compute quadratic sphere coefficients
-
-    // Initialize _EFloat_ ray coordinate values
-    EFloat ox(ray.o.x, oErr.x), oy(ray.o.y, oErr.y), oz(ray.o.z, oErr.z);
-    EFloat dx(ray.d.x, dErr.x), dy(ray.d.y, dErr.y), dz(ray.d.z, dErr.z);
-    EFloat a = dx * dx + dy * dy + dz * dz; EFloat b = 2 * (dx * ox + dy * oy + dz * oz);
-    EFloat c = ox * ox + oy * oy + oz * oz - EFloat(radius) * EFloat(radius);
-
-    // Solve quadratic equation for _t_ values
-    EFloat t0, t1;
-    if (!Quadratic(a, b, c, &t0, &t1)) return false;
-
-    // Check quadric shape _t0_ and _t1_ for nearest intersection
-    if (t0.UpperBound() > ray.tMax || t1.LowerBound() <= 0) return false;
-    EFloat tShapeHit = t0;
-    if (tShapeHit.LowerBound() <= 0) {
-        tShapeHit = t1;
-        if (tShapeHit.UpperBound() > ray.tMax) return false;
-    }
-
-    // Compute sphere hit position and $\phi$
-    pHit = ray((Float)tShapeHit);
-
-    // Refine sphere intersection point
-    pHit *= radius / Distance(pHit, Point3f(0, 0, 0));
-    if (pHit.x == 0 && pHit.y == 0) pHit.x = 1e-5f * radius;
-    phi = std::atan2(pHit.y, pHit.x);
-    if (phi < 0) phi += 2 * Pi;
-
-    // Test sphere intersection against clipping parameters
-    if ((zMin > -radius && pHit.z < zMin) || (zMax < radius && pHit.z > zMax) ||
-        phi > phiMax) {
-        if (tShapeHit == t1) return false;
-        if (t1.UpperBound() > ray.tMax) return false;
-        tShapeHit = t1;
-        // Compute sphere hit position and $\phi$
-        pHit = ray((Float)tShapeHit);
-
-        // Refine sphere intersection point
-        pHit *= radius / Distance(pHit, Point3f(0, 0, 0));
-        if (pHit.x == 0 && pHit.y == 0) pHit.x = 1e-5f * radius;
-        phi = std::atan2(pHit.y, pHit.x);
-        if (phi < 0) phi += 2 * Pi;
-        if ((zMin > -radius && pHit.z < zMin) ||
-            (zMax < radius && pHit.z > zMax) || phi > phiMax)
+  bool SphereDE::IntersectP(const Ray &r, bool testAlphaTexture) const {
+  
+  // not an engineering point of view 
+  
+    float   d        = Evaluate(r.o);
+    Point3f p        = r.o;
+    float tShapeHit  = 0;  
+  
+    //std::cout<<"Shadow Ray Testing ... "<<std::endl;
+  
+  
+    for (int iter = 0; iter < maxIters ; iter++ ) {
+  
+       if( d < hitEpsilon) {   //hit position
+          return true;
+       }
+  
+       else {
+  
+          if ( d < r.tMax){
+  
+              p = p +  d/r.d.Length() * r.d;
+              tShapeHit += d/r.d.Length();
+              d = Evaluate(p);
+          }
+          else {
             return false;
+          }
+  
+       }
+  
     }
-    return true;
-*/
-}
+  
+    return false;
+  
+   }
 
 Float SphereDE::Area() const { std::cout<<"Area is " << phiMax * radius * (zMax - zMin) << std::endl; return phiMax * radius * (zMax - zMin); }
 
@@ -428,7 +234,7 @@ Interaction SphereDE::Sample(const Interaction &ref, const Point2f &u,
 
     return it;
 }
-
+  
 Float SphereDE::Pdf(const Interaction &ref, const Vector3f &wi) const {
     Point3f pCenter = (*ObjectToWorld)(Point3f(0, 0, 0));
     // Return uniform PDF if point is inside sphere
@@ -472,7 +278,7 @@ std::shared_ptr<Shape> CreateSphereDEShape(const Transform *o2w,
     Float normalEpsilon = params.FindOneFloat("normalEpsilon", 0.00001f);  //a nice picture
 
      
-   std::cout <<"creating  shape" << std::endl;
+    std::cout <<"creating  SphereDE" << std::endl;
 
     return std::make_shared<SphereDE>(o2w, w2o, reverseOrientation, radius, zmin, zmax, phimax,maxIters,hitEpsilon,rayEpsilonMultiplier,normalEpsilon);
 }

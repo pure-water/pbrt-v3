@@ -66,8 +66,8 @@ class DistanceEstimator : public Shape {
     virtual Bounds3f ObjectBound() const;
     virtual Float Area() const;
 
-    bool Intersect(const Ray &ray, Float *tHit, SurfaceInteraction *isect, bool testAlphaTexture) const;
-    bool IntersectP(const Ray &ray, bool testAlphaTexture) const; 
+    virtual bool Intersect(const Ray &ray, Float *tHit, SurfaceInteraction *isect, bool testAlphaTexture) const;
+    virtual bool IntersectP(const Ray &ray, bool testAlphaTexture) const; 
     Interaction Sample(const Point2f &u, Float *pdf) const;
     Interaction Sample(const Interaction &ref, const Point2f &u, Float *pdf) const;
 
