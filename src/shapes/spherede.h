@@ -64,20 +64,12 @@ class SphereDE : public DistanceEstimator {
           normalEpsilon(normalEpsilon)
           {}
 
-    bool Intersect(const Ray &ray, Float *tHit, SurfaceInteraction *isect, bool testAlphaTexture) const;
-    bool IntersectP(const Ray &ray, bool testAlphaTexture) const; 
-    Interaction Sample(const Point2f &u, Float *pdf) const;
-    Interaction Sample(const Interaction &ref, const Point2f &u, Float *pdf) const;
-    Float Pdf(const Interaction &ref, const Vector3f &wi) const;
-    Float SolidAngle(const Point3f &p, int nSamples) const;
-
 
     //distance estimator
     Bounds3f ObjectBound() const;
     Float Area() const;
     Float Evaluate(const Point3f &p) const;
 
-    Vector3f CalculateNormal(const Point3f& pos, float eps, const Vector3f& defaultNormal) const ;
 
   private:
     // DistanceEstimator Private Data
