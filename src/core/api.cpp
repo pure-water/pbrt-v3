@@ -98,6 +98,7 @@
 #include "shapes/paraboloid.h"
 #include "shapes/sphere.h"
 #include "shapes/distanceestimator.h"
+#include "shapes/infinitespheregridde.h"
 #include "shapes/spherede.h"
 #include "shapes/triangle.h"
 #include "shapes/plymesh.h"
@@ -441,6 +442,29 @@ std::vector<std::shared_ptr<Shape>> MakeShapes(const std::string &name,
     else if (name == "distanceestimator")
          s = CreateDistanceEstimatorShape(object2world, world2object, reverseOrientation,paramSet);
     */
+
+    else if (name == "infinitespheregridde")
+         s = CreateInfiniteSphereGridDEShape(object2world, world2object, reverseOrientation,paramSet);
+
+    // Create remaining single _Shape_ types
+    else if (name == "cylinder")
+        s = CreateCylinderShape(object2world, world2object, reverseOrientation,
+                                paramSet);
+    else if (name == "disk")
+        s = CreateDiskShape(object2world, world2object, reverseOrientation,
+                            paramSet);
+    else if (name == "cone")
+        s = CreateConeShape(object2world, world2object, reverseOrientation,
+                            paramSet);
+    else if (name == "paraboloid")
+        s = CreateParaboloidShape(object2world, world2object,
+                                  reverseOrientation, paramSet);
+    else if (name == "hyperboloid")
+        s = CreateHyperboloidShape(object2world, world2object,
+                                   reverseOrientation, paramSet);
+    if (s != nullptr) shapes.push_back(s);
+
+    // Create multiple-_Shape_ types
 
     else if (name == "spherede")
          s = CreateSphereDEShape(object2world, world2object, reverseOrientation,paramSet);
