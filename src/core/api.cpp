@@ -435,6 +435,8 @@ std::vector<std::shared_ptr<Shape>> MakeShapes(const std::string &name,
     std::vector<std::shared_ptr<Shape>> shapes;
     std::shared_ptr<Shape> s;
 
+    std::cout << "shape naming is : " << name << std::endl;
+
     if (name == "sphere")
         s = CreateSphereShape(object2world, world2object, reverseOrientation,paramSet);
 

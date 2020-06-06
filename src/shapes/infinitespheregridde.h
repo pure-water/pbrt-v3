@@ -50,7 +50,7 @@ class InfiniteSphereGridDE : public DistanceEstimator {
     // DistanceEstimator Public Methods
      InfiniteSphereGridDE(const Transform *ObjectToWorld, const Transform *WorldToObject,
            bool reverseOrientation, Float radius, Float zMin, Float zMax,
-           Float phiMax,int maxIters, float hitEpsilon, float rayEpsilonMultiplier, float normalEpsilon)
+           Float phiMax,int maxIters, float hitEpsilon, float rayEpsilonMultiplier, float normalEpsilon,float cellSize)
           : DistanceEstimator(ObjectToWorld, WorldToObject, reverseOrientation,radius,zMin,zMax,phiMax,maxIters,hitEpsilon,rayEpsilonMultiplier,normalEpsilon),
           radius(radius),
           zMin(Clamp(std::min(zMin, zMax), -radius, radius)),
@@ -61,7 +61,8 @@ class InfiniteSphereGridDE : public DistanceEstimator {
           maxIters(maxIters),
           hitEpsilon(hitEpsilon),
           rayEpsilonMultiplier(rayEpsilonMultiplier),
-          normalEpsilon(normalEpsilon)
+          normalEpsilon(normalEpsilon),
+          cellSize(cellSize)
           {}
 
     //distance estimator
@@ -76,6 +77,7 @@ class InfiniteSphereGridDE : public DistanceEstimator {
     const Float thetaMin, thetaMax, phiMax; 
     const int maxIters;
     const Float hitEpsilon,rayEpsilonMultiplier,normalEpsilon;
+    const Float cellSize;
 
 };
 
