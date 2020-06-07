@@ -99,6 +99,7 @@
 #include "shapes/sphere.h"
 #include "shapes/distanceestimator.h"
 #include "shapes/infinitespheregridde.h"
+#include "shapes/mandelbulbde.h"
 #include "shapes/spherede.h"
 #include "shapes/triangle.h"
 #include "shapes/plymesh.h"
@@ -444,6 +445,9 @@ std::vector<std::shared_ptr<Shape>> MakeShapes(const std::string &name,
     else if (name == "distanceestimator")
          s = CreateDistanceEstimatorShape(object2world, world2object, reverseOrientation,paramSet);
     */
+
+    else if (name == "mandelbulbde")
+         s = CreateMandelbulbDEShape(object2world, world2object, reverseOrientation,paramSet);
 
     else if (name == "infinitespheregridde")
          s = CreateInfiniteSphereGridDEShape(object2world, world2object, reverseOrientation,paramSet);
