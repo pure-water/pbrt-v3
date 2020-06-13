@@ -62,7 +62,14 @@ Float InfiniteSphereGridDE::Area() const {  return 1e12; }
         local_p.y = remainder(p.y,cellSize);
         local_p.z = remainder(p.z,cellSize);
 
+        //torus shape
+      #define TORUS_GRID
+      #ifdef TORUS_GRID
+        Point2f q = Point2f(std::sqrt(local_p.x*local_p.x+local_p.z*local_p.z)-1.0,local_p.y);
+        float distance =std::sqrt(q.x*q.x+q.y*q.y)-1.0; 
+      #else
         float distance = std::abs(std::sqrt(local_p.x * local_p.x + local_p.y*local_p.y + local_p.z*local_p.z) - fixed_r);
+      #endif
         return distance;
   }
 
