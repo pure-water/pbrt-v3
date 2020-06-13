@@ -96,7 +96,8 @@ std::shared_ptr<Shape> CreateMandelbulbDEShape(const Transform *o2w,
     //?? For magic reasons, I pick this 
     //?? The 2 epsilons here are really magic
     //?? Any offset will make the final render image does not work 
-    Float hitEpsilon = params.FindOneFloat("hitEpsilon", 0.001f);
+    //Float hitEpsilon = params.FindOneFloat("hitEpsilon", 0.001f);
+    Float hitEpsilon = params.FindOneFloat("hitEpsilon", 0.01f);
     Float rayEpsilonMultiplier = params.FindOneFloat("rayEpsilonMultiplier", 10000);
     Float normalEpsilon = params.FindOneFloat("normalEpsilon", 0.00001f);  //a nice picture
     Float cellSize = params.FindOneFloat("cellSize", 4.0f);
